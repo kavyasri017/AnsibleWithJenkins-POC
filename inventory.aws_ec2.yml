@@ -1,0 +1,22 @@
+---
+plugin: aws_ec2  # Specifies the dynamic inventory plugin to use (aws_ec2 in this case).
+
+regions:
+  - us-east-1  # Lists the AWS regions to search for hosts. In this case, it's searching in the 'us-east-1' region.
+
+include_filters:
+# This section includes hosts that have specific tags in their AWS metadata.
+- tag:Env:
+    - 'test'
+    - 'prod'
+# This means the inventory will list only hosts that are tagged with 'test' or 'prod' in their AWS metadata.
+
+hostnames:
+  - ip-address  # Defines the type of hostname to use in the inventory. In this case, it uses the IP address of the hosts.
+
+compose:
+  ansible_host: private_ip_address  # Defines the variable 'ansible_host' to use the private IP address as the target host.
+  ansible_user: ubuntu  # Sets the default SSH user for connecting to the hosts as 'ubuntu'.
+  ansible_ssh_private_key_file: /home/ubuntu/.ssh/managedkey  # Specifies the path to the SSH private key file to use for authentication.
+
+# Overall, this dynamic inventory configuration generates an inventory of AWS EC2 instances based on their tags, with the IP address as the hostname, and sets some default Ansible connection parameters for these hosts.

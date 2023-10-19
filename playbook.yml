@@ -1,0 +1,114 @@
+---
+- hosts: localhost  # This playbook is executed locally on the Ansible control node.
+  gather_facts: false  # Disable gathering facts about the local system.
+
+  vars:
+    region: "{{ region }}"  # Variables to be replaced with actual values during execution.
+    instance_type: "{{ instance_type }}"
+    ami: "{{ image_id }}"
+    keypair: "{{ key_name }}"
+    subnetid: "{{ subnet_id }}"
+    aws_profile: "{{ aws_profile }}"
+
+  tasks:
+    - name: Create EC2 Key Pair  # This task creates an EC2 key pair.
+      ec2_key:
+        profile: "{{ aws_profile }}"  # AWS profile to use for authentication.
+        region: "{{ region }}"  # AWS region where the key pair will be created.
+        name: "{{ keypair }}"  # Name of the key pair.
+        key_material: "{{ lookup('file', '/home/ubuntu/managedkey.pub') }}"  # Public key material is read from the file.
+
+    - ec2_instance:
+        key_name: "{{ keypair }}"  # Key pair to associate with the instance.
+        profile: "{{ aws_profile }}"  # AWS profile to use.
+        security_group: default  # The security group for the instance.
+        instance_type: "{{ instance_type }}"  # Instance type, e.g., t2.micro.
+        image_id: "{{ ami }}"  # The Amazon Machine Image (AMI) to use.
+        wait: true  # Wait for the instance to be in a running state.
+        region: "{{ region }}"  # AWS region for the instance.
+        vpc_subnet_id: "{{ subnetid }}"  # The ID of the subnet where the instance will be launched.
+        tags:  # Tags to associate with the instance for easy identification.
+          Env: "{{ item.Env }}"
+          Name: "{{ item.Name }}"
+          Team: "{{ item.Team }}"
+        count: " {{item.count }}"
+        network:
+          assign_public_ip: true  # Assign a public IP address to the instance.
+      loop:
+        - { Env: 'test', Name: 'web1', Team: 'dev', count: '1' }
+        - { Env: 'prod', Name: 'web2', Team: 'devops', count: '2' }
+
+
+# playbook for launching different instances using different tasks
+
+    # - name: Launch EC2 Instance for Test  # This task launches an EC2 instance for testing.
+    #   ec2_instance:
+    #     key_name: "{{ keypair }}"  # Key pair to associate with the instance.
+    #     profile: "devops"  # AWS profile to use.
+    #     security_group: default  # The security group for the instance.
+    #     instance_type: "{{ instance_type }}"  # Instance type, e.g., t2.micro.
+    #     image_id: "{{ ami }}"  # The Amazon Machine Image (AMI) to use.
+    #     wait: true  # Wait for the instance to be in a running state.
+    #     region: "{{ region }}"  # AWS region for the instance.
+    #     vpc_subnet_id: "{{ subnetid }}"  # The ID of the subnet where the instance will be launched.
+    #     count: 1  # Launch a single instance.
+    #     tags:  # Tags to associate with the instance for easy identification.
+    #       Env: test
+    #       Name: web1
+    #       Team: dev
+    #     network:
+    #       assign_public_ip: true  # Assign a public IP address to the instance.
+
+    # - name: Launch EC2 Instance for Production  # This task is similar to the previous one but for production.
+    #   ec2_instance:
+    #     key_name: "{{ keypair }}"
+    #     profile: "{{ aws_profile }}"
+    #     security_group: default
+    #     instance_type: "{{ instance_type }}"
+    #     image_id: "{{ ami }}"
+    #     wait: true
+    #     region: "{{ region }}"
+    #     vpc_subnet_id: "{{ subnetid }}"
+    #     count: 1
+    #     tags:
+    #       Env: prod
+    #       Name: web2
+    #       Team: devops
+    #     network:
+    #       assign_public_ip: true
+
+
+# playbook for test purpose of loops 
+# ---
+# - hosts: localhost
+#   gather_facts: false
+#   vars:
+#       region: us-east-1
+#       instance_type: t2.micro
+#       ami: ami-053b0d53c279acc90 
+#       keypair: my_keypair
+#       subnetid: subnet-0bf916f334dd8e482
+#   tasks:
+#     - ec2_key:
+#         region: "{{ region }}"
+#         name: my_keypair
+#         key_material: "{{ lookup('file', '/home/ubuntu/managedkey.pub') }}"
+#     - ec2_instance:
+#         key_name: "{{ keypair }}"
+#         profile: "devops"
+#         security_group: default
+#         instance_type: "{{ instance_type }}"
+#         image_id: "{{ ami }}"
+#         wait: true
+#         region: "{{ region }}"
+#         vpc_subnet_id: "{{ subnetid }}"
+#         count: 2
+#         tags:
+#           Env: "{{ item.Env }}"
+#           Name: "{{ item.Name }}"
+#           Team: "{{ item.Team }}"
+#         network:
+#           assign_public_ip: true
+#       loop:
+#         - { Env: 'test', Name: 'web1', Team: 'dev' }
+#         - { Env: 'prod', Name: 'web2', Team: 'devops' }

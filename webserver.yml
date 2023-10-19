@@ -1,0 +1,56 @@
+---
+- hosts: aws_ec2  # Target hosts where tasks will be executed.
+  become: true  # Run tasks with escalated privileges.
+
+  tasks:
+    - name: Update package lists  # Update the package lists on the remote server.
+      apt:
+        update_cache: yes
+
+    - name: Install Apache2  # Install the Apache2 package.
+      apt:
+        name: apache2
+        state: latest
+
+    - name: "Creating Document root"  # Create a document root directory.
+      file:
+          state: directory
+          dest: "/home/ubuntu/app/"
+
+    - name: Webpage  # Create a custom web page with server information.
+      copy:
+        content: "<h1> WebPage of Ansible-Slave node Whose Private IP is {{ ansible_facts['default_ipv4']['address'] }} and public IP is {{ inventory_hostname }} </h1>"
+        dest: "/home/ubuntu/app/index.html"
+
+    - name: Change ownership of /home/ubuntu/ to ubuntu:www-data  # Change ownership of a directory.
+      ansible.builtin.command: chown -R ubuntu:www-data /home/ubuntu/
+
+    - name: Replace a directory in Apache2 configuration
+      ansible.builtin.lineinfile:  # Replace a line in a file.
+        path: "/etc/apache2/apache2.conf"
+        search_string: '<Directory /var/www/>'  # Search for this string.
+        line: <Directory /home/ubuntu/app>  # Replace with this line.
+
+    - name: Replace a directory in Apache2 configuration
+      ansible.builtin.blockinfile:
+        path: "/etc/apache2/apache2.conf"
+        insertafter: "</Directory>"
+        block: |
+            <Directory /home/ubuntu/app>
+                  Options Indexes FollowSymLinks
+                  AllowOverride None
+                  Require all granted
+                  Allow from all
+            </Directory>  
+
+    - name: Replace the DocumentRoot in 000-default.conf
+      ansible.builtin.lineinfile:  # Replace a line in a file.
+        path: "/etc/apache2/sites-available/000-default.conf"
+        search_string: 'DocumentRoot /var/www/html'  # Search for this string.
+        line: DocumentRoot /home/ubuntu/app/  # Replace with this line.
+      notify:
+        - restart apache2  # Notify the "restart apache2" handler.
+
+  handlers:
+    - name: restart apache2  # Define a handler to restart the Apache service.
+      service: name=apache2 state=restarted
